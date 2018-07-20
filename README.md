@@ -12,4 +12,4 @@ AWS_REGION=<aws_region> AWS_ACCESS_KEY_ID=<aws_key_id> AWS_SECRET_ACCESS_KEY=<se
 
 ## Ubiquit edgerouter-X SFP
 
-See /docs/ubnt-er-x for a precompiled script for the edgerouter series, checkout the README.md
+See /examples/ubnt-er-x for a precompiled script for the edgerouter series, checkout the README.md

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,15 +33,23 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	sess, err := session.NewSession()
-	if err != nil {
-		log.Fatalln("failed to create session,", err)
-		return
-	}
 
-	svc := route53.New(sess)
-	createARecord(svc)
-	log.Print("updating record " + name + " to new value " + ip)
+	// check if ip is same as record, so no updated is needed.
+	// else create aws session, and update record
+	if getIP() != lookupRecord(name) {
+		sess, err := session.NewSession()
+		if err != nil {
+			log.Fatalln("failed to create session,", err)
+			return
+		}
+
+		svc := route53.New(sess)
+		createARecord(svc)
+		log.Print("updating record " + name + " to new value " + ip)
+
+	} else {
+		log.Println("No updated needed, record is up to date!", getIP())
+	}
 }
 
 func createARecord(svc *route53.Route53) {
@@ -94,4 +103,13 @@ func getIP() string {
 		return ""
 	}
 	return string(bs)
+}
+
+func lookupRecord(n string) string {
+	l, err := net.LookupIP(n)
+	if err != nil {
+		log.Fatalln("Error parsing ip:", err)
+		return ""
+	}
+	return l[0].String()
 }
