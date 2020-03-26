@@ -6,10 +6,13 @@ Simple Setup for automatic updating your Record with your current IP
 
 Edit the update_ip.sh with your settings
 
-## Copy files to router (client)
+## Download source and compile
 
-```sh
-scp -r examples/ubnt-er-x/aws-r53-ddns/ <user>@<router_ip>:/config/scripts/
+
+```
+git clone https://github.com/andybroger/aws-r53-ddns
+cd aws-r53-ddns
+GOOS=linux GOARCH=mipsle go build
 ```
 
 ## Configure Task-Scheduler to run script every hour (router)

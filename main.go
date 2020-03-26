@@ -12,31 +12,34 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 )
 
-var name string
+var record string
 var ip string
 var ttl int64
 var weight = int64(1)
 var zoneID string
 
 func init() {
-	flag.StringVar(&name, "d", "", "domain name")
-	flag.StringVar(&ip, "ip", getIP(), "ip for a record (default is your current wan ip)")
+	flag.StringVar(&record, "r", "", "record name")
+	flag.StringVar(&ip, "ip", "", "ip for a record (default is your current wan ip)")
 	flag.StringVar(&zoneID, "z", "", "AWS Zone Id for domain")
-	flag.Int64Var(&ttl, "ttl", int64(60), "ttl for DNS Cache")
+	flag.Int64Var(&ttl, "ttl", int64(60), "ttl for dns cache")
 
 }
 
 func main() {
 	flag.Parse()
-	if name == "" || zoneID == "" {
-		log.Fatalf("Incomplete arguments: d: %s, ip: %s, z: %s", name, ip, zoneID)
+	if record == "" || zoneID == "" {
+		log.Fatalf("Incomplete arguments: d: %s, ip: %s, z: %s", record, ip, zoneID)
 		flag.PrintDefaults()
 		return
+	}
+	if ip == "" {
+		ip = getIP()
 	}
 
 	// check if ip is same as record, so no updated is needed.
 	// else create aws session, and update record
-	if getIP() != lookupRecord(name) {
+	if ip != lookupRecord(record) {
 		sess, err := session.NewSession()
 		if err != nil {
 			log.Fatalln("failed to create session,", err)
@@ -45,10 +48,10 @@ func main() {
 
 		svc := route53.New(sess)
 		createARecord(svc)
-		log.Print("updating record " + name + " to new value " + ip)
+		log.Print("updating record " + record + " to new value " + ip)
 
 	} else {
-		log.Println("No updated needed, record is up to date!", getIP())
+		log.Println("No updated needed, record is up to date!", ip)
 	}
 }
 
@@ -60,7 +63,7 @@ func createARecord(svc *route53.Route53) {
 				{ // Required
 					Action: aws.String("UPSERT"), // Required
 					ResourceRecordSet: &route53.ResourceRecordSet{ // Required
-						Name: aws.String(name), // Required
+						Name: aws.String(record), // Required
 						Type: aws.String("A"),  // Required
 						ResourceRecords: []*route53.ResourceRecord{
 							{ // Required
@@ -69,11 +72,11 @@ func createARecord(svc *route53.Route53) {
 						},
 						TTL:           aws.Int64(ttl),
 						Weight:        aws.Int64(weight),
-						SetIdentifier: aws.String("Arbitrary Id describing this change set"),
+						SetIdentifier: aws.String("DDNS"),
 					},
 				},
 			},
-			Comment: aws.String("updating record " + name + " to new value " + ip),
+			Comment: aws.String("updating record " + record + " to new value " + ip),
 		},
 		HostedZoneId: aws.String(zoneID), // Required
 	}
@@ -89,7 +92,7 @@ func createARecord(svc *route53.Route53) {
 }
 
 func getIP() string {
-	resp, err := http.Get("https://diagnostic.opendns.com/myip")
+		resp, err := http.Get("https://diagnostic.opendns.com/myip")
 	if err != nil {
 		log.Fatalln("Error getting ip:", err)
 		return ""
@@ -105,8 +108,8 @@ func getIP() string {
 	return string(bs)
 }
 
-func lookupRecord(n string) string {
-	l, err := net.LookupIP(n)
+func lookupRecord(r string) string {
+	l, err := net.LookupIP(r)
 	if err != nil {
 		log.Fatalln("Error parsing ip:", err)
 		return ""
